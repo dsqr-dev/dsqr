@@ -20,14 +20,13 @@
           ];
           
           shellHook = ''
-            echo "Discord Bot Development Environment"
-            echo "Run 'bun install' to get started"
+            echo "🦉🦉🦉🦉🦉🦉🦉🦉🦉🦉🦉"
           '';
         };
 
         packages.default = pkgs.writeScriptBin "start-bot" ''
           #!/bin/sh
-          bun run inedx.ts
+          bun run packages/bot/src/index.ts
         '';
       });
 }
