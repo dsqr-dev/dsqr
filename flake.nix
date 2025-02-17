@@ -15,7 +15,8 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             bun
-            nodejs_20
+            nodejs_22
+            git
           ];
           
           shellHook = ''
@@ -26,7 +27,7 @@
 
         packages.default = pkgs.writeScriptBin "start-bot" ''
           #!/bin/sh
-          bun run bot.ts
+          bun run inedx.ts
         '';
       });
 }
