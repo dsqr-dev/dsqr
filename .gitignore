@@ -2,3 +2,5 @@ node_modules
 dist
 .nvim.lua
 .DS_STORE
+todo.md
+dsqr.local.sqlite
