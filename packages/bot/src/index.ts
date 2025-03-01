@@ -1,11 +1,10 @@
 import { Client, GatewayIntentBits, Events } from 'discord.js';
 import { Database } from "bun:sqlite";
-import { config } from 'dotenv';
-
-config()
+import { getConfig } from "@/config.ts";
 
 function setupDatabase() {
-  const db = new Database("dsqr.local.sqlite", { create: true });
+  const config = getConfig();
+  const db = new Database(config.discord.dbPath, { create: true });
   
   db.exec(`
     CREATE TABLE IF NOT EXISTS guilds (
@@ -34,10 +33,10 @@ function setupDatabase() {
   };
 }
 
-
-async function main() {  
+async function main() {
+  const config = getConfig();
   const { insertGuild, removeGuild, getGuild, getAllGuilds, db } = setupDatabase();
-
+  
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -45,28 +44,26 @@ async function main() {
   });
   
   client.once(Events.ClientReady, (readyClient) => {
-      console.log(`Ready! Logged in as ${readyClient.user.tag}`);
-      
-      // Store existing guilds when bot starts
-      readyClient.guilds.cache.forEach(guild => {
-        insertGuild.run({
-          $guildId: guild.id,
-          $name: guild.name,
-          $ownerId: guild.ownerId
-        });
-        console.log(`Stored existing guild: ${guild.name} (${guild.id})`);
+    console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+    // Store existing guilds when bot starts
+    readyClient.guilds.cache.forEach(guild => {
+      insertGuild.run({
+        $guildId: guild.id,
+        $name: guild.name,
+        $ownerId: guild.ownerId
       });
+      console.log(`Stored existing guild: ${guild.name} (${guild.id})`);
     });
+  });
   
-    client.on(Events.Error, (error) => {
-      console.error('Discord client error:', error);
-    });
-    
+  client.on(Events.Error, (error) => {
+    console.error('Discord client error:', error);
+  });
+  
   // Guild join event - fires when the bot joins a new server
   client.on(Events.GuildCreate, (guild) => {
     console.log(`Joined a new guild: ${guild.name} (id: ${guild.id})`);
     console.log(`This guild has ${guild.memberCount} members`);
-    
     // Store new guild in the database
     insertGuild.run({
       $guildId: guild.id,
@@ -78,7 +75,6 @@ async function main() {
   // Guild delete event - fires when the bot is removed from a server
   client.on(Events.GuildDelete, (guild) => {
     console.log(`Removed from guild: ${guild.name} (id: ${guild.id})`);
-    
     // Remove guild from the database
     removeGuild.run({
       $guildId: guild.id
@@ -91,17 +87,13 @@ async function main() {
     client.destroy();
     process.exit(0);
   });
-
-  if (!process.env.DISCORD_BOT_TOKEN) {
-    console.error("No bot token provided. Please add your token to the code.");
-    process.exit(1);
-  }
-
+  
   try {
-    await client.login(process.env.DISCORD_BOT_TOKEN);
+    await client.login(config.discord.botToken);
   } catch (error) {
     console.error('Failed to login:', error);
     process.exit(1);
   }
 }
+
 await main();

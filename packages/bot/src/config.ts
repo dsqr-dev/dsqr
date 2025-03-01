@@ -1,6 +1,5 @@
 import { z } from "zod"
 import { config as loadEnv } from "dotenv"
-
 loadEnv()
 
 const getEnvVar = (key: string, required = true) => {
@@ -20,11 +19,26 @@ const aiServicesSchema = z.object({
   }),
 })
 
+const discordSchema = z.object({
+  botToken: z
+    .string()
+    .min(1, "Discord bot token is required"),
+  clientId: z
+    .string()
+    .min(1, "Discord client ID is required"),
+  dbPath: z
+    .string()
+    .optional()
+    .default("dsqr.local.sqlite"),
+})
+
 const configSchema = z.object({
   ai: aiServicesSchema,
+  discord: discordSchema,
 })
 
 export type AiConfig = z.infer<typeof aiServicesSchema>
+export type DiscordConfig = z.infer<typeof discordSchema>
 export type Config = z.infer<typeof configSchema>
 
 let configInstance: Config | null = null
@@ -35,6 +49,11 @@ export function createConfig(): Config {
       perplexity: {
         key: getEnvVar("PERPLEXITY_KEY"), // This will throw if not found
       },
+    },
+    discord: {
+      botToken: getEnvVar("DISCORD_BOT_TOKEN"),
+      clientId: getEnvVar("DISCORD_CLIENT_ID"),
+      dbPath: getEnvVar("DISCORD_DB_PATH", false) || "dsqr.local.sqlite",
     },
   }
 
