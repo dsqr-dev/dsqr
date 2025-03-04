@@ -1,0 +1,2 @@
+# DSQR Discord Bot
+

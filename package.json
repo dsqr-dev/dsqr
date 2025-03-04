@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "build": "bun run --filter=\"@dsqr/discord\""
+    "version": "bunx @changesets/cli version",
+    "build": "bun run --filter=\"@dsqr/discord\" build && bunx @changesets/cli publish"
   },
   "workspaces": [
     "packages/discord",
