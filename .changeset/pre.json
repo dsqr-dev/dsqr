@@ -1,0 +1,11 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "@dsqr/discord-bot": "0.0.0",
+    "@dsqr/discord": "0.0.0"
+  },
+  "changesets": [
+    "cool-days-argue"
+  ]
+}
