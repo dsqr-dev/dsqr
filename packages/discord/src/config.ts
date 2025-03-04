@@ -43,9 +43,9 @@ export function createConfig(): Config {
   const rawConfig = {
     ai: {
       // Only include perplexity if the env var exists
-      ...(getEnvVar("PERPLEXITY_KEY", false) && {
+      ...(getEnvVar("PERPLEXITY_API_KEY", false) && {
         perplexity: {
-          key: getEnvVar("PERPLEXITY_KEY", false),
+          key: getEnvVar("PERPLEXITY_API_KEY", false),
         },
       }),
     },
@@ -55,7 +55,6 @@ export function createConfig(): Config {
       dbPath: getEnvVar("DISCORD_DB_PATH", false) || "dsqr.local.sqlite",
     },
   }
-
   try {
     return configSchema.parse(rawConfig)
   } catch (error) {

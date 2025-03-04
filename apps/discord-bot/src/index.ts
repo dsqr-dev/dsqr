@@ -1,5 +1,5 @@
 import { local, DsqrDiscordConfig, dsqrDiscord } from "@dsqr/discord"
-import { PingCommand } from "@/commands/ping.ts"
+import { AskDsqrCommand } from "@/commands/ask.ts"
 
 function dsqrDiscordBot() {
   const config = local.getConfig()
@@ -11,7 +11,7 @@ function dsqrDiscordBot() {
       type: "sqlite",
       filename: "dsqr.local.sql",
     },
-    commands: [new PingCommand()],
+    commands: [new AskDsqrCommand()],
   } satisfies DsqrDiscordConfig
 
   const bot = dsqrDiscord(discordConfig)
