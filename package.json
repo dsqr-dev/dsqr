@@ -1,12 +1,14 @@
 {
-  "name": "openauthjs",
+  "name": "dsqr",
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "build": "bun run --filter=\"@dsqr/discord\""
   },
   "workspaces": [
-    "packages/bot"
+    "packages/discord",
+    "apps/discord-bot"
   ],
   "devDependencies": {
     "@tsconfig/node22": "22.0.0",

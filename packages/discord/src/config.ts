@@ -10,26 +10,22 @@ const getEnvVar = (key: string, required = true) => {
   return value
 }
 
+// Make Perplexity configuration optional but keep its internal structure validation
 const aiServicesSchema = z.object({
-  perplexity: z.object({
-    key: z
-      .string()
-      .min(1, "Perplexity API key is required")
-      .regex(/^pplx-[a-zA-Z0-9]+$/, "Invalid Perplexity API key format"),
-  }),
+  perplexity: z
+    .object({
+      key: z
+        .string()
+        .min(1, "Perplexity API key is required")
+        .regex(/^pplx-[a-zA-Z0-9]+$/, "Invalid Perplexity API key format"),
+    })
+    .optional(),
 })
 
 const discordSchema = z.object({
-  botToken: z
-    .string()
-    .min(1, "Discord bot token is required"),
-  clientId: z
-    .string()
-    .min(1, "Discord client ID is required"),
-  dbPath: z
-    .string()
-    .optional()
-    .default("dsqr.local.sqlite"),
+  botToken: z.string().min(1, "Discord bot token is required"),
+  clientId: z.string().min(1, "Discord client ID is required"),
+  dbPath: z.string().optional().default("dsqr.local.sqlite"),
 })
 
 const configSchema = z.object({
@@ -46,9 +42,12 @@ let configInstance: Config | null = null
 export function createConfig(): Config {
   const rawConfig = {
     ai: {
-      perplexity: {
-        key: getEnvVar("PERPLEXITY_KEY"), // This will throw if not found
-      },
+      // Only include perplexity if the env var exists
+      ...(getEnvVar("PERPLEXITY_KEY", false) && {
+        perplexity: {
+          key: getEnvVar("PERPLEXITY_KEY", false),
+        },
+      }),
     },
     discord: {
       botToken: getEnvVar("DISCORD_BOT_TOKEN"),
@@ -70,9 +69,11 @@ export function createConfig(): Config {
   }
 }
 
-export function getConfig(): Config {
+function getConfig(): Config {
   if (!configInstance) {
     configInstance = createConfig()
   }
   return configInstance
 }
+
+export { getConfig }

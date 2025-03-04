@@ -1,8 +1,11 @@
 {
-  "name": "@dsqr/discord-bot",
-  "version": "0.0.0-local.0",
+  "name": "@dsqr/discord",
+  "version": "0.0.0",
   "type": "module",
-  "private": "true",
+  "sideEffects": false,
+  "scripts": {
+    "build": "bun run scripts/build.ts"
+  },
   "exports": {
     ".": {
       "import": "./dist/esm/index.js",

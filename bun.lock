@@ -13,9 +13,20 @@
         "@types/bun": "latest",
       },
     },
-    "packages/bot": {
+    "apps/discord-bot": {
       "name": "@dsqr/discord-bot",
-      "version": "0.0.0-local.0",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dsqr/discord": "workspace:*",
+        "discord.js": "^14.18.0",
+      },
+      "peerDependencies": {
+        "typescript": "^5.6.3",
+      },
+    },
+    "packages/discord": {
+      "name": "@dsqr/discord",
+      "version": "0.0.0",
       "dependencies": {
         "@ai-sdk/perplexity": "^1.0.0",
         "ai": "^4.1.41",
@@ -87,7 +98,9 @@
 
     "@discordjs/ws": ["@discordjs/ws@1.2.1", "", { "dependencies": { "@discordjs/collection": "^2.1.0", "@discordjs/rest": "^2.4.3", "@discordjs/util": "^1.1.0", "@sapphire/async-queue": "^1.5.2", "@types/ws": "^8.5.10", "@vladfrangu/async_event_emitter": "^2.2.4", "discord-api-types": "^0.37.119", "tslib": "^2.6.2", "ws": "^8.17.0" } }, "sha512-PBvenhZG56a6tMWF/f4P6f4GxZKJTBG95n7aiGSPTnodmz4N5g60t79rSIAq7ywMbv8A4jFtexMruH+oe51aQQ=="],
 
-    "@dsqr/discord-bot": ["@dsqr/discord-bot@workspace:packages/bot"],
+    "@dsqr/discord": ["@dsqr/discord@workspace:packages/discord"],
+
+    "@dsqr/discord-bot": ["@dsqr/discord-bot@workspace:apps/discord-bot"],
 
     "@manypkg/find-root": ["@manypkg/find-root@1.1.0", "", { "dependencies": { "@babel/runtime": "^7.5.5", "@types/node": "^12.7.1", "find-up": "^4.1.0", "fs-extra": "^8.1.0" } }, "sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA=="],
 
