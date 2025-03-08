@@ -1,8 +1,8 @@
 import { Command } from "@dsqr/discord"
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder } from "discord.js"
 
 interface DsqrCommand extends Command {
-    slashCommandConfig: SlashCommandBuilder;
+  slashCommandConfig: SlashCommandBuilder
 }
 
 export { DsqrCommand }

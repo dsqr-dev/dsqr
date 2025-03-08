@@ -9,11 +9,7 @@
     "emitDeclarationOnly": true,
     "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
-    "types": ["bun-types"],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "types": ["bun-types"]
   },
   "include": ["src"]
 }

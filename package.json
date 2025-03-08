@@ -3,9 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "version": "bunx @changesets/cli version",
-    "build": "bun run --filter=\"@dsqr/discord\" build && bunx @changesets/cli publish"
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "workspaces": [
     "packages/discord",

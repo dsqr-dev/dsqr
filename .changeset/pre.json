@@ -6,6 +6,8 @@
     "@dsqr/discord": "0.0.0"
   },
   "changesets": [
-    "cool-days-argue"
+    "cool-days-argue",
+    "silver-animals-join",
+    "slick-dancers-stand"
   ]
 }

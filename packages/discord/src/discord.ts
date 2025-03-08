@@ -1,4 +1,4 @@
-import { sqliteDatabase, SqliteDatabase } from "@/database/sqlite.js"
+import { sqliteDatabase, SqliteDatabase } from "./database/sqlite.js"
 import {
   Client,
   GatewayIntentBits,
@@ -7,10 +7,11 @@ import {
   Routes,
   REST as DiscordRestClient,
   ChatInputCommandInteraction,
+  ClientOptions,
+  ClientEvents,
 } from "discord.js"
-import { Command } from "@/command.js"
+import { Command } from "./command.js"
 
-/** @todo "sqlite" | "mysql" */
 type DsqrDiscordDatabaseType = "sqlite"
 
 interface DsqrDiscordDatabaseBase {
@@ -24,22 +25,68 @@ interface DsqrDiscordSQLiteDatabase extends DsqrDiscordDatabaseBase {
 
 type DsqrDiscordDatabase = DsqrDiscordSQLiteDatabase
 
+type EventHandler<K extends keyof ClientEvents> = (
+  ...args: ClientEvents[K]
+) => void | Promise<void>
+
+/** Callbacks for key lifecycle and interaction events */
+interface DsqrDiscordCallbacks {
+  onStart?: () => void | Promise<void>
+  onReady?: (client: Client<true>) => void | Promise<void>
+  onShutdown?: () => void | Promise<void>
+  onError?: (error: Error) => void
+  onCommandSuccess?: (
+    interaction: ChatInputCommandInteraction,
+  ) => void | Promise<void>
+  onCommandError?: (
+    error: Error,
+    interaction: ChatInputCommandInteraction,
+  ) => void | Promise<void>
+}
+
 interface DsqrDiscordConfig {
   botToken: string
   clientId: string
   database: DsqrDiscordDatabase
   commands?: Command[]
+  intents?: GatewayIntentBits[]
+  clientOptions?: Partial<ClientOptions>
+  eventHandlers?: Partial<{
+    [K in keyof ClientEvents]: EventHandler<K>
+  }>
+  callbacks?: DsqrDiscordCallbacks
 }
 
 interface DsqrDiscord {
   client: Client
-  db: Pick<SqliteDatabase, "getGuild" | "getAllGuilds">
+  db: Pick<SqliteDatabase, "getGuild" | "getAllGuilds" | "database">
   start: () => Promise<void>
   stop: () => void
 }
 
 function dsqrDiscord(config: DsqrDiscordConfig): DsqrDiscord {
-  const { botToken, clientId, database, commands } = config
+  const {
+    botToken,
+    clientId,
+    database,
+    commands,
+    intents = [],
+    clientOptions = {},
+    eventHandlers = {},
+    callbacks = {},
+  } = config
+
+  const {
+    onStart,
+    onReady,
+    onShutdown,
+    onError,
+    onCommandSuccess,
+    onCommandError,
+  } = callbacks
+
+  if (!botToken) throw new Error("botToken is required")
+  if (!clientId) throw new Error("clientId is required")
 
   let db: SqliteDatabase
 
@@ -51,47 +98,61 @@ function dsqrDiscord(config: DsqrDiscordConfig): DsqrDiscord {
       throw new Error(`Unsupported database type: ${database.type}`)
   }
 
+  const mergedIntents = [GatewayIntentBits.Guilds, ...intents]
   const client = new Client({
-    intents: [GatewayIntentBits.Guilds],
+    intents: mergedIntents,
+    ...clientOptions,
   })
 
   const restClient = new DiscordRestClient().setToken(botToken)
 
-  const setupEventHandlers = () => {
-    client.once(Events.ClientReady, (readyClient) => {
-      console.log(`Ready! Logged in as ${readyClient.user.tag}`)
-      readyClient.guilds.cache.forEach((guild) => {
+  const setupDefaultEventHandlers = () => {
+    const defaultHandlers: Partial<{
+      [K in keyof ClientEvents]: EventHandler<K>
+    }> = {
+      [Events.ClientReady]: (readyClient) => {
+        console.log(`Ready! Logged in as ${readyClient.user.tag}`)
+        readyClient.guilds.cache.forEach((guild) => {
+          db.insertGuild.run({
+            $guildId: guild.id,
+            $name: guild.name,
+            $ownerId: guild.ownerId,
+          })
+          console.log(`Stored existing guild: ${guild.name} (${guild.id})`)
+        })
+        onReady?.(readyClient)
+      },
+      [Events.Error]: (error) => {
+        console.error("Discord client error:", error)
+        onError?.(error)
+      },
+      [Events.GuildCreate]: (guild) => {
+        console.log(`Joined a new guild: ${guild.name} (id: ${guild.id})`)
+        console.log(`This guild has ${guild.memberCount} members`)
         db.insertGuild.run({
           $guildId: guild.id,
           $name: guild.name,
           $ownerId: guild.ownerId,
         })
-        console.log(`Stored existing guild: ${guild.name} (${guild.id})`)
-      })
-    })
+      },
+      [Events.GuildDelete]: (guild) => {
+        console.log(`Removed from guild: ${guild.name} (id: ${guild.id})`)
+        db.removeGuild.run({ $guildId: guild.id })
+      },
+      [Events.InteractionCreate]: async (interaction: Interaction) => {
+        if (interaction.isCommand()) {
+          await handleInteraction(interaction as ChatInputCommandInteraction)
+        }
+      },
+    }
 
-    client.on(Events.Error, (error) => {
-      console.error("Discord client error:", error)
-    })
+    const finalHandlers = { ...defaultHandlers, ...eventHandlers }
 
-    client.on(Events.GuildCreate, (guild) => {
-      console.log(`Joined a new guild: ${guild.name} (id: ${guild.id})`)
-      console.log(`This guild has ${guild.memberCount} members`)
-      db.insertGuild.run({
-        $guildId: guild.id,
-        $name: guild.name,
-        $ownerId: guild.ownerId,
-      })
-    })
-
-    client.on(Events.GuildDelete, (guild) => {
-      console.log(`Removed from guild: ${guild.name} (id: ${guild.id})`)
-      db.removeGuild.run({ $guildId: guild.id })
-    })
-
-    client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-      if (interaction.isCommand()) {
-        await handleInteraction(interaction as ChatInputCommandInteraction)
+    Object.entries(finalHandlers).forEach(([event, handler]) => {
+      if (event === Events.ClientReady) {
+        client.once(event, handler as any)
+      } else {
+        client.on(event, handler as any)
       }
     })
   }
@@ -100,7 +161,6 @@ function dsqrDiscord(config: DsqrDiscordConfig): DsqrDiscord {
     interaction: ChatInputCommandInteraction,
   ): Promise<void> => {
     const commandName = interaction.commandName
-
     const matchedCommand = commands?.find(
       (command) => command.name === commandName,
     )
@@ -119,6 +179,7 @@ function dsqrDiscord(config: DsqrDiscordConfig): DsqrDiscord {
           user: { name: interaction.user.tag },
         },
       )
+      await onCommandSuccess?.(interaction)
     } catch (err) {
       console.error(
         `Error executing command [/${interaction.commandName}]: ${err}`,
@@ -127,14 +188,16 @@ function dsqrDiscord(config: DsqrDiscordConfig): DsqrDiscord {
           user: { name: interaction.user.tag },
         },
       )
+      const error = err instanceof Error ? err : new Error(String(err))
+      await onCommandError?.(error, interaction)
+      onError?.(error)
     }
   }
 
   const registerSlashCommands = async (commands: Command[]) => {
-    const slashCommands = commands.map((command: Command) =>
+    const slashCommands = commands.map((command) =>
       command.slashCommandConfig.toJSON(),
     )
-
     try {
       const data = (await restClient.put(Routes.applicationCommands(clientId), {
         body: slashCommands,
@@ -144,31 +207,39 @@ function dsqrDiscord(config: DsqrDiscordConfig): DsqrDiscord {
       )
     } catch (error) {
       console.error("Error registering application (/) commands", error)
+      onError?.(error instanceof Error ? error : new Error(String(error)))
     }
   }
 
   const start = async () => {
-    setupEventHandlers()
+    setupDefaultEventHandlers()
     if (commands) await registerSlashCommands(commands)
     try {
       await client.login(botToken)
+      await onStart?.()
     } catch (error) {
       console.error("Failed to start bot:", error)
+      onError?.(error instanceof Error ? error : new Error(String(error)))
       throw error
     }
   }
 
-  const stop = () => {
+  const stop = async () => {
     try {
       db.database.close()
       client.destroy()
+      await onShutdown?.()
       console.log("Bot has been shut down")
     } catch (error) {
       console.error("Error during shutdown:", error)
+      onError?.(error instanceof Error ? error : new Error(String(error)))
     }
   }
 
-  process.on("SIGINT", stop)
+  process.on("SIGINT", async () => {
+    await stop()
+    process.exit(0)
+  })
 
   return {
     start,
@@ -177,6 +248,7 @@ function dsqrDiscord(config: DsqrDiscordConfig): DsqrDiscord {
     db: {
       getGuild: db.getGuild,
       getAllGuilds: db.getAllGuilds,
+      database: db.database,
     },
   }
 }
